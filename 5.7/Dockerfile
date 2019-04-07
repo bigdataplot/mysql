@@ -3,6 +3,14 @@ FROM debian:stretch-slim
 # add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN groupadd -r mysql && useradd -r -g mysql mysql
 
+## Fix UID/GID
+RUN usermod -u 11002 mysql
+RUN find / -user 999 -exec chown -h 11002 {} \; ; exit 0
+
+RUN groupmod -g 11002 mysql
+RUN find / -group 999 -exec chgrp -h 11002 {} \; ; exit 0
+RUN usermod -g 11002 mysql
+
 RUN apt-get update && apt-get install -y --no-install-recommends gnupg dirmngr && rm -rf /var/lib/apt/lists/*
 
 # add gosu for easy step-down from root
@@ -70,11 +78,10 @@ RUN { \
 # don't reverse lookup hostnames, they are usually another container
 	&& echo '[mysqld]\nskip-host-cache\nskip-name-resolve' > /etc/mysql/conf.d/docker.cnf
 
-VOLUME /var/lib/mysql
-
+# VOLUME /var/lib/mysql
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN ln -s usr/local/bin/docker-entrypoint.sh /entrypoint.sh # backwards compat
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-EXPOSE 3306 33060
+#EXPOSE 3306 33060
 CMD ["mysqld"]
